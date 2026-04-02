@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.LinkedList;
+import java.util.LinkedHashSet;
 
 /**
  * Class representing a Train with its consist (collection of bogies).
@@ -14,7 +16,7 @@ public class Train {
     private String engineType;
     private List<Bogie> consist;
     private int totalCapacity;
-    private Set<String> bogieIds; // track unique bogie IDs to prevent duplicates
+    private Set<String> bogieIds; // track unique bogie IDs to prevent duplicates (preserves insertion order)
 
     /**
      * Constructor for creating a Train
@@ -24,9 +26,11 @@ public class Train {
     public Train(String trainId, String engineType) {
         this.trainId = trainId;
         this.engineType = engineType;
-        this.consist = new ArrayList<>();
+        // Use LinkedList to better model chaining and efficient insert/remove operations
+        this.consist = new LinkedList<>();
         this.totalCapacity = 0;
-        this.bogieIds = new HashSet<>();
+        // Use LinkedHashSet to enforce uniqueness while preserving insertion order (UC4)
+        this.bogieIds = new LinkedHashSet<>();
     }
 
     /**
@@ -47,7 +51,7 @@ public class Train {
 
     /**
      * Add a bogie to the train consist
-     * Ensures bogie IDs remain unique across the train (UC3)
+     * Ensures bogie IDs remain unique across the train (UC3/UC4)
      * @param bogie Bogie to add
      * @return true if bogie is added successfully, false if null or duplicate ID
      */
@@ -170,6 +174,14 @@ public class Train {
             }
         }
         return result;
+    }
+
+    /**
+     * Return an ordered list of bogie IDs in insertion order
+     * @return List of bogie IDs preserving insertion order
+     */
+    public List<String> getOrderedBogieIds() {
+        return new ArrayList<>(bogieIds);
     }
 
     /**
