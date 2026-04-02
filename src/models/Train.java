@@ -264,6 +264,22 @@ public class Train {
     }
 
     /**
+     * Return passenger bogies sorted by seating capacity (descending)
+     * Uses a Comparator to order passenger bogies by their capacity.
+     * @return sorted list of PassengerBogie (descending capacity)
+     */
+    public java.util.List<PassengerBogie> getPassengerBogiesSortedByCapacityDesc() {
+        java.util.List<PassengerBogie> list = listPassengerBogies();
+        list.sort(new java.util.Comparator<PassengerBogie>() {
+            @Override
+            public int compare(PassengerBogie a, PassengerBogie b) {
+                return Integer.compare(b.getCapacity(), a.getCapacity()); // descending
+            }
+        });
+        return list;
+    }
+
+    /**
      * Get string representation of the train
      * @return String representation
      */
