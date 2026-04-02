@@ -6,6 +6,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.LinkedList;
 import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Class representing a Train with its consist (collection of bogies).
@@ -17,6 +19,7 @@ public class Train {
     private List<Bogie> consist;
     private int totalCapacity;
     private Set<String> bogieIds; // track unique bogie IDs to prevent duplicates (preserves insertion order)
+    private Map<String, Integer> bogieCapacityMap; // UC6: map bogie ID -> capacity
 
     /**
      * Constructor for creating a Train
@@ -31,6 +34,8 @@ public class Train {
         this.totalCapacity = 0;
         // Use LinkedHashSet to enforce uniqueness while preserving insertion order (UC4)
         this.bogieIds = new LinkedHashSet<>();
+        // UC6: store capacities keyed by bogie ID
+        this.bogieCapacityMap = new HashMap<>();
     }
 
     /**
@@ -51,7 +56,8 @@ public class Train {
 
     /**
      * Add a bogie to the train consist
-     * Ensures bogie IDs remain unique across the train (UC3/UC4)
+     * Ensures bogie IDs remain unique across the train (UC3/UC4/UC6)
+     * Also records capacity mapping for the bogie
      * @param bogie Bogie to add
      * @return true if bogie is added successfully, false if null or duplicate ID
      */
@@ -70,6 +76,7 @@ public class Train {
         // add
         consist.add(bogie);
         bogieIds.add(id);
+        bogieCapacityMap.put(id, bogie.getCapacity()); // UC6
         totalCapacity += bogie.getCapacity();
         return true;
     }
@@ -96,6 +103,7 @@ public class Train {
         Bogie removed = consist.remove(lastIndex);
         totalCapacity -= removed.getCapacity();
         bogieIds.remove(removed.getBogieId());
+        bogieCapacityMap.remove(removed.getBogieId()); // UC6
         return removed;
     }
 
@@ -137,10 +145,66 @@ public class Train {
                 totalCapacity -= bogie.getCapacity();
                 consist.remove(bogie);
                 bogieIds.remove(bogieId);
+                bogieCapacityMap.remove(bogieId); // UC6
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Remove a bogie by its position/index in the consist
+     * @param index zero-based index of the bogie to remove
+     * @return the removed Bogie if removed successfully, otherwise null
+     */
+    public Bogie removeBogieByIndex(int index) {
+        if (index >= 0 && index < consist.size()) {
+            Bogie removed = consist.remove(index);
+            totalCapacity -= removed.getCapacity();
+            bogieIds.remove(removed.getBogieId());
+            bogieCapacityMap.remove(removed.getBogieId()); // UC6
+            return removed;
+        }
+        return null;
+    }
+
+    /**
+     * Return a list of passenger bogies (copy) currently in the consist
+     * @return List of PassengerBogie instances
+     */
+    public java.util.List<PassengerBogie> listPassengerBogies() {
+        java.util.List<PassengerBogie> result = new java.util.ArrayList<>();
+        for (Bogie bogie : consist) {
+            if (bogie instanceof PassengerBogie) {
+                result.add((PassengerBogie) bogie);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Return an ordered list of bogie IDs in insertion order
+     * @return List of bogie IDs preserving insertion order
+     */
+    public List<String> getOrderedBogieIds() {
+        return new ArrayList<>(bogieIds);
+    }
+
+    /**
+     * UC6: Get the capacity associated with a bogie ID
+     * @param bogieId ID of the bogie
+     * @return capacity if present, or null if bogie ID not known
+     */
+    public Integer getBogieCapacity(String bogieId) {
+        return bogieCapacityMap.get(bogieId);
+    }
+
+    /**
+     * UC6: Return a copy of the bogie capacity mapping (ID -> capacity)
+     * @return Map copy of bogie capacities
+     */
+    public Map<String, Integer> getBogieCapacityMap() {
+        return new HashMap<>(bogieCapacityMap);
     }
 
     /**
@@ -197,43 +261,6 @@ public class Train {
      */
     public boolean addPassengerBogie(PassengerBogie passengerBogie) {
         return addBogie(passengerBogie);
-    }
-
-    /**
-     * Remove a bogie by its position/index in the consist
-     * @param index zero-based index of the bogie to remove
-     * @return the removed Bogie if removed successfully, otherwise null
-     */
-    public Bogie removeBogieByIndex(int index) {
-        if (index >= 0 && index < consist.size()) {
-            Bogie removed = consist.remove(index);
-            totalCapacity -= removed.getCapacity();
-            bogieIds.remove(removed.getBogieId());
-            return removed;
-        }
-        return null;
-    }
-
-    /**
-     * Return a list of passenger bogies (copy) currently in the consist
-     * @return List of PassengerBogie instances
-     */
-    public java.util.List<PassengerBogie> listPassengerBogies() {
-        java.util.List<PassengerBogie> result = new java.util.ArrayList<>();
-        for (Bogie bogie : consist) {
-            if (bogie instanceof PassengerBogie) {
-                result.add((PassengerBogie) bogie);
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Return an ordered list of bogie IDs in insertion order
-     * @return List of bogie IDs preserving insertion order
-     */
-    public List<String> getOrderedBogieIds() {
-        return new ArrayList<>(bogieIds);
     }
 
     /**
