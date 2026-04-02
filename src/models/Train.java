@@ -75,6 +75,58 @@ public class Train {
     }
 
     /**
+     * Push a bogie onto the consist (LIFO semantics for last-attachment scenarios)
+     * Alias for addBogie to emphasize stack-like attachment
+     * @param bogie Bogie to push/attach
+     * @return true if attached successfully
+     */
+    public boolean pushBogie(Bogie bogie) {
+        return addBogie(bogie);
+    }
+
+    /**
+     * Pop the last attached bogie (LIFO behavior) - used for rollback / emergency detach
+     * @return the removed Bogie if present, otherwise null
+     */
+    public Bogie popLastBogie() {
+        if (consist.isEmpty()) {
+            return null;
+        }
+        int lastIndex = consist.size() - 1;
+        Bogie removed = consist.remove(lastIndex);
+        totalCapacity -= removed.getCapacity();
+        bogieIds.remove(removed.getBogieId());
+        return removed;
+    }
+
+    /**
+     * Peek at the last attached bogie without removing it
+     * @return last Bogie or null if consist is empty
+     */
+    public Bogie peekLastBogie() {
+        if (consist.isEmpty()) {
+            return null;
+        }
+        return consist.get(consist.size() - 1);
+    }
+
+    /**
+     * Whether the consist is empty
+     * @return true if no bogies attached
+     */
+    public boolean isConsistEmpty() {
+        return consist.isEmpty();
+    }
+
+    /**
+     * Get the number of bogies (stack size)
+     * @return number of bogies
+     */
+    public int size() {
+        return consist.size();
+    }
+
+    /**
      * Remove a bogie from the train consist
      * @param bogieId ID of the bogie to remove
      * @return true if bogie is removed successfully
