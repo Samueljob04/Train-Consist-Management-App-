@@ -302,6 +302,15 @@ public class Train {
     }
 
     /**
+     * UC9: Group bogies by their type using Stream collectors
+     * @return Map where key is bogie type (e.g., "Sleeper", "AC Chair", "Rectangular") and value is list of bogies
+     */
+    public java.util.Map<String, java.util.List<Bogie>> groupBogiesByType() {
+        return consist.stream()
+                .collect(java.util.stream.Collectors.groupingBy(Bogie::getType));
+    }
+
+    /**
      * Get string representation of the train
      * @return String representation
      */
