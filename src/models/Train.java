@@ -280,6 +280,28 @@ public class Train {
     }
 
     /**
+     * UC8: Filter passenger bogies with capacity >= minCapacity using Stream API
+     * @param minCapacity minimum seating capacity threshold
+     * @return filtered list of PassengerBogie meeting the threshold
+     */
+    public java.util.List<PassengerBogie> filterPassengerBogiesByMinCapacity(int minCapacity) {
+        return listPassengerBogies().stream()
+                .filter(pb -> pb.getCapacity() >= minCapacity)
+                .toList();
+    }
+
+    /**
+     * UC8: Generic stream-based filter allowing any predicate on PassengerBogie
+     * @param predicate java.util.function.Predicate to filter passenger bogies
+     * @return filtered list based on predicate
+     */
+    public java.util.List<PassengerBogie> filterPassengerBogies(java.util.function.Predicate<PassengerBogie> predicate) {
+        return listPassengerBogies().stream()
+                .filter(predicate)
+                .toList();
+    }
+
+    /**
      * Get string representation of the train
      * @return String representation
      */
