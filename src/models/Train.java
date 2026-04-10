@@ -311,6 +311,16 @@ public class Train {
     }
 
     /**
+     * UC10: Count total seats across all passenger bogies using Stream reduce
+     * @return total seating capacity for passenger bogies
+     */
+    public int totalPassengerSeats() {
+        return listPassengerBogies().stream()
+                .map(PassengerBogie::getCapacity)
+                .reduce(0, Integer::sum);
+    }
+
+    /**
      * Get string representation of the train
      * @return String representation
      */
