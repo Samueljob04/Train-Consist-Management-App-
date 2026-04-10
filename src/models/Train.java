@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.function.Predicate;
 
 /**
  * Class representing a Train with its consist (collection of bogies).
@@ -346,6 +347,40 @@ public class Train {
         Pattern p = Pattern.compile("^[A-Z]{3}\\d{3}$");
         Matcher m = p.matcher(cargoCode);
         return m.matches();
+    }
+
+    /**
+     * Functional interface alias for bogie validation rules
+     */
+    public interface BogieRule extends Predicate<Bogie> {}
+
+    /**
+     * UC12: Validate goods bogies for safety compliance using stream and provided rules
+     * Example rule: if bogie is CylindricalGoods then cargoType must be one of {"Petroleum","Oil","Liquid"}
+     * @param rule BogieRule predicate to apply
+     * @return list of bogies that violate the rule (empty if all compliant)
+     */
+    public java.util.List<Bogie> validateGoodsBogieCompliance(BogieRule rule) {
+        return consist.stream()
+                .filter(b -> b instanceof GoodsBogie)
+                .filter(b -> !rule.test(b)) // keep those that fail the rule
+                .toList();
+    }
+
+    /**
+     * Example built-in rule for cylindrical bogies
+     * @return rule that returns true when compliant
+     */
+    public static BogieRule cylindricalGoodsRule() {
+        return b -> {
+            if (!(b instanceof CylindricalGoods)) return true; // rule not applicable
+            GoodsBogie gb = (GoodsBogie) b;
+            String cargo = gb.getCargoType();
+            if (cargo == null) return false;
+            return cargo.equalsIgnoreCase("Petroleum") ||
+                   cargo.equalsIgnoreCase("Oil") ||
+                   cargo.equalsIgnoreCase("Liquid");
+        };
     }
 
     /**
