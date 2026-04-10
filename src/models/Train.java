@@ -8,6 +8,8 @@ import java.util.LinkedList;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 /**
  * Class representing a Train with its consist (collection of bogies).
@@ -318,6 +320,32 @@ public class Train {
         return listPassengerBogies().stream()
                 .map(PassengerBogie::getCapacity)
                 .reduce(0, Integer::sum);
+    }
+
+    /**
+     * UC11: Validate Train ID format using regex
+     * Expected format: TRN-#### (e.g., TRN-1234)
+     * @param trainId train identifier to validate
+     * @return true if valid format, false otherwise
+     */
+    public static boolean isValidTrainId(String trainId) {
+        if (trainId == null) return false;
+        Pattern p = Pattern.compile("^TRN-\\d{4}$");
+        Matcher m = p.matcher(trainId);
+        return m.matches();
+    }
+
+    /**
+     * UC11: Validate cargo code format using regex
+     * Expected format: three uppercase letters followed by 3 digits, e.g. CGO123
+     * @param cargoCode cargo code to validate
+     * @return true if matches expected format
+     */
+    public static boolean isValidCargoCode(String cargoCode) {
+        if (cargoCode == null) return false;
+        Pattern p = Pattern.compile("^[A-Z]{3}\\d{3}$");
+        Matcher m = p.matcher(cargoCode);
+        return m.matches();
     }
 
     /**
