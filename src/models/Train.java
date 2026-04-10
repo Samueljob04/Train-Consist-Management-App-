@@ -2,6 +2,14 @@ package models;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.LinkedList;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 /**
  * Class representing a Train with its consist (collection of bogies).
@@ -12,6 +20,8 @@ public class Train {
     private String engineType;
     private List<Bogie> consist;
     private int totalCapacity;
+    private Set<String> bogieIds; // track unique bogie IDs to prevent duplicates (preserves insertion order)
+    private Map<String, Integer> bogieCapacityMap; // UC6: map bogie ID -> capacity
 
     /**
      * Constructor for creating a Train
@@ -21,8 +31,13 @@ public class Train {
     public Train(String trainId, String engineType) {
         this.trainId = trainId;
         this.engineType = engineType;
-        this.consist = new ArrayList<>();
+        // Use LinkedList to better model chaining and efficient insert/remove operations
+        this.consist = new LinkedList<>();
         this.totalCapacity = 0;
+        // Use LinkedHashSet to enforce uniqueness while preserving insertion order (UC4)
+        this.bogieIds = new LinkedHashSet<>();
+        // UC6: store capacities keyed by bogie ID
+        this.bogieCapacityMap = new HashMap<>();
     }
 
     /**
@@ -43,16 +58,82 @@ public class Train {
 
     /**
      * Add a bogie to the train consist
+     * Ensures bogie IDs remain unique across the train (UC3/UC4/UC6)
+     * Also records capacity mapping for the bogie
      * @param bogie Bogie to add
-     * @return true if bogie is added successfully
+     * @return true if bogie is added successfully, false if null or duplicate ID
      */
     public boolean addBogie(Bogie bogie) {
-        if (bogie != null) {
-            consist.add(bogie);
-            totalCapacity += bogie.getCapacity();
-            return true;
+        if (bogie == null) {
+            return false;
         }
-        return false;
+        String id = bogie.getBogieId();
+        if (id == null || id.isEmpty()) {
+            return false; // invalid ID
+        }
+        // Enforce uniqueness
+        if (bogieIds.contains(id)) {
+            return false; // duplicate ID - reject
+        }
+        // add
+        consist.add(bogie);
+        bogieIds.add(id);
+        bogieCapacityMap.put(id, bogie.getCapacity()); // UC6
+        totalCapacity += bogie.getCapacity();
+        return true;
+    }
+
+    /**
+     * Push a bogie onto the consist (LIFO semantics for last-attachment scenarios)
+     * Alias for addBogie to emphasize stack-like attachment
+     * @param bogie Bogie to push/attach
+     * @return true if attached successfully
+     */
+    public boolean pushBogie(Bogie bogie) {
+        return addBogie(bogie);
+    }
+
+    /**
+     * Pop the last attached bogie (LIFO behavior) - used for rollback / emergency detach
+     * @return the removed Bogie if present, otherwise null
+     */
+    public Bogie popLastBogie() {
+        if (consist.isEmpty()) {
+            return null;
+        }
+        int lastIndex = consist.size() - 1;
+        Bogie removed = consist.remove(lastIndex);
+        totalCapacity -= removed.getCapacity();
+        bogieIds.remove(removed.getBogieId());
+        bogieCapacityMap.remove(removed.getBogieId()); // UC6
+        return removed;
+    }
+
+    /**
+     * Peek at the last attached bogie without removing it
+     * @return last Bogie or null if consist is empty
+     */
+    public Bogie peekLastBogie() {
+        if (consist.isEmpty()) {
+            return null;
+        }
+        return consist.get(consist.size() - 1);
+    }
+
+    /**
+     * Whether the consist is empty
+     * @return true if no bogies attached
+     */
+    public boolean isConsistEmpty() {
+        return consist.isEmpty();
+    }
+
+    /**
+     * Get the number of bogies (stack size)
+     * @return number of bogies
+     */
+    public int size() {
+        return consist.size();
     }
 
     /**
@@ -65,10 +146,67 @@ public class Train {
             if (bogie.getBogieId().equals(bogieId)) {
                 totalCapacity -= bogie.getCapacity();
                 consist.remove(bogie);
+                bogieIds.remove(bogieId);
+                bogieCapacityMap.remove(bogieId); // UC6
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Remove a bogie by its position/index in the consist
+     * @param index zero-based index of the bogie to remove
+     * @return the removed Bogie if removed successfully, otherwise null
+     */
+    public Bogie removeBogieByIndex(int index) {
+        if (index >= 0 && index < consist.size()) {
+            Bogie removed = consist.remove(index);
+            totalCapacity -= removed.getCapacity();
+            bogieIds.remove(removed.getBogieId());
+            bogieCapacityMap.remove(removed.getBogieId()); // UC6
+            return removed;
+        }
+        return null;
+    }
+
+    /**
+     * Return a list of passenger bogies (copy) currently in the consist
+     * @return List of PassengerBogie instances
+     */
+    public java.util.List<PassengerBogie> listPassengerBogies() {
+        java.util.List<PassengerBogie> result = new java.util.ArrayList<>();
+        for (Bogie bogie : consist) {
+            if (bogie instanceof PassengerBogie) {
+                result.add((PassengerBogie) bogie);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Return an ordered list of bogie IDs in insertion order
+     * @return List of bogie IDs preserving insertion order
+     */
+    public List<String> getOrderedBogieIds() {
+        return new ArrayList<>(bogieIds);
+    }
+
+    /**
+     * UC6: Get the capacity associated with a bogie ID
+     * @param bogieId ID of the bogie
+     * @return capacity if present, or null if bogie ID not known
+     */
+    public Integer getBogieCapacity(String bogieId) {
+        return bogieCapacityMap.get(bogieId);
+    }
+
+    /**
+     * UC6: Return a copy of the bogie capacity mapping (ID -> capacity)
+     * @return Map copy of bogie capacities
+     */
+    public Map<String, Integer> getBogieCapacityMap() {
+        return new HashMap<>(bogieCapacityMap);
     }
 
     /**
@@ -107,6 +245,107 @@ public class Train {
             }
         }
         return null;
+    }
+
+    /**
+     * Check whether a bogie with the given ID exists in the consist
+     * @param bogieId ID to check
+     * @return true if exists, false otherwise
+     */
+    public boolean containsBogie(String bogieId) {
+        return findBogie(bogieId) != null;
+    }
+
+    /**
+     * Add a passenger bogie to the train (convenience wrapper)
+     * @param passengerBogie PassengerBogie to add
+     * @return true if added successfully
+     */
+    public boolean addPassengerBogie(PassengerBogie passengerBogie) {
+        return addBogie(passengerBogie);
+    }
+
+    /**
+     * Return passenger bogies sorted by seating capacity (descending)
+     * Uses a Comparator to order passenger bogies by their capacity.
+     * @return sorted list of PassengerBogie (descending capacity)
+     */
+    public java.util.List<PassengerBogie> getPassengerBogiesSortedByCapacityDesc() {
+        java.util.List<PassengerBogie> list = listPassengerBogies();
+        list.sort(new java.util.Comparator<PassengerBogie>() {
+            @Override
+            public int compare(PassengerBogie a, PassengerBogie b) {
+                return Integer.compare(b.getCapacity(), a.getCapacity()); // descending
+            }
+        });
+        return list;
+    }
+
+    /**
+     * UC8: Filter passenger bogies with capacity >= minCapacity using Stream API
+     * @param minCapacity minimum seating capacity threshold
+     * @return filtered list of PassengerBogie meeting the threshold
+     */
+    public java.util.List<PassengerBogie> filterPassengerBogiesByMinCapacity(int minCapacity) {
+        return listPassengerBogies().stream()
+                .filter(pb -> pb.getCapacity() >= minCapacity)
+                .toList();
+    }
+
+    /**
+     * UC8: Generic stream-based filter allowing any predicate on PassengerBogie
+     * @param predicate java.util.function.Predicate to filter passenger bogies
+     * @return filtered list based on predicate
+     */
+    public java.util.List<PassengerBogie> filterPassengerBogies(java.util.function.Predicate<PassengerBogie> predicate) {
+        return listPassengerBogies().stream()
+                .filter(predicate)
+                .toList();
+    }
+
+    /**
+     * UC9: Group bogies by their type using Stream collectors
+     * @return Map where key is bogie type (e.g., "Sleeper", "AC Chair", "Rectangular") and value is list of bogies
+     */
+    public java.util.Map<String, java.util.List<Bogie>> groupBogiesByType() {
+        return consist.stream()
+                .collect(java.util.stream.Collectors.groupingBy(Bogie::getType));
+    }
+
+    /**
+     * UC10: Count total seats across all passenger bogies using Stream reduce
+     * @return total seating capacity for passenger bogies
+     */
+    public int totalPassengerSeats() {
+        return listPassengerBogies().stream()
+                .map(PassengerBogie::getCapacity)
+                .reduce(0, Integer::sum);
+    }
+
+    /**
+     * UC11: Validate Train ID format using regex
+     * Expected format: TRN-#### (e.g., TRN-1234)
+     * @param trainId train identifier to validate
+     * @return true if valid format, false otherwise
+     */
+    public static boolean isValidTrainId(String trainId) {
+        if (trainId == null) return false;
+        Pattern p = Pattern.compile("^TRN-\\d{4}$");
+        Matcher m = p.matcher(trainId);
+        return m.matches();
+    }
+
+    /**
+     * UC11: Validate cargo code format using regex
+     * Expected format: three uppercase letters followed by 3 digits, e.g. CGO123
+     * @param cargoCode cargo code to validate
+     * @return true if matches expected format
+     */
+    public static boolean isValidCargoCode(String cargoCode) {
+        if (cargoCode == null) return false;
+        Pattern p = Pattern.compile("^[A-Z]{3}\\d{3}$");
+        Matcher m = p.matcher(cargoCode);
+        return m.matches();
     }
 
     /**
