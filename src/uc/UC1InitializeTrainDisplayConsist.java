@@ -2,6 +2,8 @@ package uc;
 
 import models.*;
 
+import java.util.List;
+
 /**
  * UC1: Initialize Train and Display Consist Summary
  * 
@@ -88,6 +90,9 @@ public class UC1InitializeTrainDisplayConsist {
         System.out.println("Step 6: Consist Composition Breakdown");
         System.out.println("====================================");
         displayCompositionBreakdown(passengerTrain);
+
+        // Step 7: Performance Comparison Demo
+        performanceComparisonDemo(passengerTrain);
     }
 
     /**
@@ -153,5 +158,38 @@ public class UC1InitializeTrainDisplayConsist {
         System.out.println();
 
         System.out.println("✓ Train initialization and consist display complete!");
+    }
+
+    private static void performanceComparisonDemo(Train train) {
+        System.out.println("\nPerformance comparison: traditional loop vs streams (filter passenger bogies >= 70)");
+
+        // Warm-up
+        for (int i = 0; i < 100; i++) {
+            train.filterPassengerBogiesByMinCapacity(70);
+            train.listPassengerBogies();
+        }
+
+        // Measure loop
+        long startLoop = System.nanoTime();
+        List<PassengerBogie> loopResult = filterWithLoop(train, 70);
+        long timeLoop = System.nanoTime() - startLoop;
+
+        // Measure stream
+        long startStream = System.nanoTime();
+        List<PassengerBogie> streamResult = train.filterPassengerBogiesByMinCapacity(70);
+        long timeStream = System.nanoTime() - startStream;
+
+        System.out.println(String.format("Loop result size: %d, Time (ns): %d", loopResult.size(), timeLoop));
+        System.out.println(String.format("Stream result size: %d, Time (ns): %d", streamResult.size(), timeStream));
+    }
+
+    private static List<PassengerBogie> filterWithLoop(Train train, int threshold) {
+        List<PassengerBogie> out = new java.util.ArrayList<>();
+        for (PassengerBogie pb : train.listPassengerBogies()) {
+            if (pb.getCapacity() >= threshold) {
+                out.add(pb);
+            }
+        }
+        return out;
     }
 }
