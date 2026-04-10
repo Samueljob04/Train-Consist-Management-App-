@@ -13,9 +13,13 @@ public abstract class PassengerBogie extends Bogie {
      * @param bogieId Unique identifier for the bogie
      * @param capacity Maximum seat capacity
      * @param type Type of passenger bogie (e.g., "Sleeper", "AC Chair", "First Class")
+     * @throws InvalidBogieCapacityException when capacity is not positive
      */
     public PassengerBogie(String bogieId, int capacity, String type) {
         super(bogieId, capacity, type);
+        if (capacity <= 0) {
+            throw new InvalidBogieCapacityException("Invalid passenger bogie capacity: " + capacity);
+        }
         this.seatsOccupied = 0;
         this.seatsAvailable = capacity;
     }
